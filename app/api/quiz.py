@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 
 import requests
@@ -44,6 +45,11 @@ def swap_answers(quiz_dict, previous_answer):
     return quiz_dict, curr_answer
 
 
+def parse_airdate(airdate_str):
+    airdate = datetime.strptime(airdate_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+    return airdate.strftime("%Y-%m-%d %H:%M:%S.%f%z")
+
+
 @router.post("/{questions_num}", response_model=list[QuizBase])
 async def create_new_quiz(questions_num: int):
     quizzes_data = fetch_quiz_data(questions_num, URL)
@@ -58,7 +64,7 @@ async def create_new_quiz(questions_num: int):
             "question_id": quiz["id"],
             "question": quiz["question"],
             "answer": quiz["answer"],
-            "airdate": quiz["airdate"],
+            "airdate": parse_airdate(quiz["airdate"]),
         }
 
         quiz_in_base = await get_quiz_by_question_id(quiz["question_id"])
