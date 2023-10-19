@@ -2,4 +2,4 @@
 
 
 1. alembic revision --autogenerate -m "First migration"
-2. 
+2. alembic upgrade head 
