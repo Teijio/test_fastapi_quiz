@@ -1,7 +1,6 @@
-from datetime import datetime, timezone
-import json
+from datetime import datetime
 
-import requests
+import aiohttp
 from fastapi import APIRouter, HTTPException
 
 from app.crud.quiz import (
@@ -17,13 +16,14 @@ URL = "https://jservice.io/api/random?count="
 ONE_QUIZ = 1
 
 
-def fetch_quiz_data(questions_num: int, URL: str) -> dict:
-    response = requests.get(f"{URL}{questions_num}")
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=500, detail="Failed to fetch quiz data"
-        )
-    return json.loads(response.content)
+async def fetch_quiz_data(questions_num: int, URL: str) -> dict:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{URL}{questions_num}") as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=500, detail="Failed to fetch quiz data"
+                )
+            return await response.json()
 
 
 async def get_unique_quiz():
@@ -52,7 +52,7 @@ def parse_airdate(airdate_str):
 
 @router.post("/{questions_num}", response_model=list[QuizBase])
 async def create_new_quiz(questions_num: int):
-    quizzes_data = fetch_quiz_data(questions_num, URL)
+    quizzes_data = await fetch_quiz_data(questions_num, URL)
     quizzes_list = []
     quiz_previous_answer = []
 
@@ -67,9 +67,9 @@ async def create_new_quiz(questions_num: int):
             "airdate": parse_airdate(quiz["airdate"]),
         }
 
-        quiz_in_base = await get_quiz_by_question_id(quiz["question_id"])
+        is_quiz_in_base = await get_quiz_by_question_id(quiz["question_id"])
 
-        if quiz_in_base:
+        if is_quiz_in_base:
             quiz = await get_unique_quiz()
 
         quiz_into_schema = QuizCreate(**quiz)
